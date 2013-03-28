@@ -1,6 +1,7 @@
 #ifndef NEXA_NODE_RF433_TRANSCEIVER_H
 #define NEXA_NODE_RF433_TRANSCEIVER_H
 
+#include "Macros.h"
 #include "FastPort.h"
 
 #include <limits.h>

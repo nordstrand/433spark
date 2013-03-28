@@ -1,10 +1,9 @@
 #ifndef NEXA_NODE_NEXA_COMMAND_H
 #define NEXA_NODE_NEXA_COMMAND_H
 
+#include "Macros.h"
 #include "RF433Transceiver.h"
 #include "HexUtils.h"
-
-#define ARRAY_LENGTH(a) ((sizeof (a)) / (sizeof (a)[0]))
 
 class NexaCommand {
 public: // types & constants

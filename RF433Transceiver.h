@@ -66,10 +66,9 @@ public:
 	 * This method must be called with high frequency, at least twice
 	 * as high as the frequency of the shortest pulse to be detected.
 	 *
-	 * This method assumes that the longest pulse of interest is
-	 * shorter than INT_MAX µs. The length of the returned pulse is
-	 * pinned to INT_MAX/INT_MIN (for a HIGH and LOW pulse,
-	 * respectively).
+	 * This method assumes that the longest pulse of interest is <
+	 * INT_MAX µs. The length of the returned pulse is pinned to
+	 * INT_MAX/-INT_MAX (for a HIGH/LOW pulses, respectively).
 	 */
 	int rx_get_pulse()
 	{
@@ -81,10 +80,7 @@ public:
 
 		unsigned long elapsed = now - pulse_start;
 		pulse_start = now;
-		if (ret_state)
-			return elapsed > INT_MAX ? INT_MAX : elapsed;
-		else
-			return -elapsed < INT_MIN ? INT_MIN : -elapsed;
+		return int(MIN(elapsed, INT_MAX)) * (ret_state ? 1 : -1);
 	}
 
 private:

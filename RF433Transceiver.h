@@ -3,6 +3,8 @@
 
 #include "FastPort.h"
 
+#include <limits.h>
+
 /*
  * Encapsulate a 433MHz receiver/transmitter pair (like the WLS107B4B
  * documented at [1]), where both the receiver (RX) and transmitter (TX)
@@ -20,7 +22,8 @@
  */
 class RF433Transceiver {
 public:
-	RF433Transceiver(FastPort port) : port(port)
+	RF433Transceiver(FastPort port)
+		: port(port), pulse_start(0), pulse_state(false)
 	{
 		port.d_mode(OUTPUT);
 		port.a_mode(INPUT);
@@ -52,8 +55,42 @@ public:
 	// Return current RX state (true iff 433MHz carrier present)
 	inline bool rx_pin() { return port.a_read(); }
 
+	/*
+	 * Block and return the current pulse from the RX.
+	 *
+	 * This will block until rx_pin() changes. At that point it will
+	 * return an int whose absolute value is the pulse length in µs,
+	 * and the sign is positive for a HIGH pulse and negative for a
+	 * LOW pulse.
+	 *
+	 * This method must be called with high frequency, at least twice
+	 * as high as the frequency of the shortest pulse to be detected.
+	 *
+	 * This method assumes that the longest pulse of interest is
+	 * shorter than INT_MAX µs. The length of the returned pulse is
+	 * pinned to INT_MAX/INT_MIN (for a HIGH and LOW pulse,
+	 * respectively).
+	 */
+	int rx_get_pulse()
+	{
+		while (pulse_state == rx_pin())
+			; // spin until state changes
+		unsigned long now = micros();
+		bool ret_state = pulse_state;
+		pulse_state = rx_pin();
+
+		unsigned long elapsed = now - pulse_start;
+		pulse_start = now;
+		if (ret_state)
+			return elapsed > INT_MAX ? INT_MAX : elapsed;
+		else
+			return -elapsed < INT_MIN ? INT_MIN : -elapsed;
+	}
+
 private:
 	FastPort port;
+	unsigned long pulse_start;
+	bool pulse_state;
 };
 
 #endif

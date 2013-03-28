@@ -20,6 +20,7 @@
 #if DEBUG
 #define ASSERT(expr) do { \
 	if (!(expr)) { \
+		Serial.println(); \
 		Serial.print(__FILE__); \
 		Serial.print(F(":")); \
 		Serial.print(__LINE__); \

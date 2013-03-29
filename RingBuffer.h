@@ -64,6 +64,15 @@ public: // read-side queries
 	const T * r_buf() const { return buffer + r_pos; }
 
 	/**
+	 * Return pointer to the wrapped/trailing portion of the buffer.
+	 *
+	 * This returns a valid pointer even when the ring buffer is NOT
+	 * wrapped, but in this case, r_wrapped_buf_len() will return 0,
+	 * hence nothing should be read from the returned pointer
+	 */
+	const T * r_wrapped_buf() const { return buffer; }
+
+	/**
 	 * Return the number of elements available from r_buf().
 	 *
 	 * This may be less than the total number of available elements
@@ -73,6 +82,20 @@ public: // read-side queries
 	{
 		size_t i_w = w_pos; // cache volatile access
 		return (i_w >= r_pos ? i_w : size) - r_pos;
+	}
+
+	/**
+	 * Return the number of elements available from r_wrapped_buf().
+	 *
+	 * This will only be non-zero when the buffer is wrapped, i.e.
+	 * when the write pointer has wrapped back to the beginning of the
+	 * buffer, while the read pointer has not. At any time,
+	 * r_available() == r_buf_len() + r_wrapped_buf_len()
+	 */
+	size_t r_wrapped_buf_len() const
+	{
+		size_t i_w = w_pos; // cache volatile access
+		return i_w >= r_pos ? 0 : i_w;
 	}
 
 	/**

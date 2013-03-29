@@ -33,7 +33,7 @@
 	} \
 } while (0)
 #else
-#define ASSERT(expr, msg)
+#define ASSERT(expr)
 #endif
 #endif
 

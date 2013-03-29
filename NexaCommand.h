@@ -3,6 +3,7 @@
 
 #include "Macros.h"
 #include "RF433Transceiver.h"
+#include "RingBuffer.h"
 #include "HexUtils.h"
 
 class NexaCommand {
@@ -19,16 +20,32 @@ public: // types & constants
 
 public: // initializers
 	/*
-	 * Initialize NexaCommand instance from  incoming command string
+	 * Initialize NexaCommand instance from incoming command string
 	 * of the form "V:DDDDDD:G:C:S", where
 	 *  - V = Nexa command version (hex digit)
 	 *  - DDDDDD = 24-bit device id in hex
 	 *  - G = group bit (0/1)
 	 *  - C = channel in hex (0-F)
 	 *  - S = state bit (0/1 == off/on)
+	 *
+	 * Return true on success, false if command string is not valid.
 	 */
-	static bool from_cmd_str(NexaCommand & cmd, const char * buf,
-	                         size_t len);
+	static bool from_cmd_str(NexaCommand & cmd,
+				 const char * buf, size_t len);
+
+	/*
+	 * Initialize NexaCommand instance from bits in ring buffer.
+	 *
+	 * This factory will consume (some, but not necessarily all)
+	 * available data in the given ring buffer, and if a complete Nexa
+	 * command is parsed, the given NexaCommand instance will be
+	 * initialized accrodingly.
+	 *
+	 * This factory will not initalize the given NexaCommand instance
+	 * every time it's called, but when it does, it will return true.
+	 */
+	static bool from_bit_buffer(NexaCommand & cmd,
+				    RingBuffer<char> & rx_bits);
 
 public: // queries
 	// Print this Nexa command on the serial port.
@@ -45,6 +62,31 @@ private: // helpers
 	void transmit_12bit(RF433Transceiver & rf_port, size_t repeats) const;
 	void transmit_32bit(RF433Transceiver & rf_port, size_t repeats) const;
 
+	/*
+	 * Add the given bit into the given byte array at the given bit
+	 * index.
+	 *
+	 * The bit index is LSB, so:
+	 *  - index 0 corresponds to the LSB of dst[dst_len - 1]
+	 *  - index 7 corresponds to the MSB of dst[dst_len - 1]
+	 *  - index 8 corresponds to the LSB of dst[dst_len - 2]
+	 * and so on....
+	 */
+	static void add_bit(byte * dst, size_t dst_len, size_t bit_idx, int bit_val);
+
+	/*
+	 * Initialize this object from the 12/32 bits in the given buf.
+	 *
+	 * No input validation is performed. The given buf is assumed to
+	 * contain 12/32 '0' or '1' characters.
+	 *
+	 * The command bits are of the form:
+	 *  - 12-bit format: DDDDDDDD011S
+	 *  - 32-bit format: DDDDDDDDDDDDDDDDDDDDDDDD10GSCCCC
+	 */
+	void from_12bit_cmd(const char buf[12]);
+	void from_32bit_cmd(const char buf[32]);
+
 public: // representation
 	Version version;
 	byte device[3]; // 24-bit device id (NEXA_12BIT only uses last 8)
@@ -53,8 +95,8 @@ public: // representation
 	bool state; // ON - true, OFF - false
 };
 
-bool NexaCommand::from_cmd_str(NexaCommand & cmd, const char * buf,
-			       size_t len)
+bool NexaCommand::from_cmd_str(NexaCommand & cmd,
+			       const char * buf, size_t len)
 {
 	if (len != cmd_str_len)
 		return false;
@@ -78,6 +120,44 @@ bool NexaCommand::from_cmd_str(NexaCommand & cmd, const char * buf,
 	cmd.group = g;
 	cmd.state = s;
 	return true;
+}
+
+bool NexaCommand::from_bit_buffer(NexaCommand & cmd,
+				  RingBuffer<char> & rx_bits)
+{
+	static NexaCommand::Version version = NexaCommand::NEXA_INVAL;
+	static char buf[32]; // Long enough for the longest command
+	static size_t buf_pos = 0;
+	static size_t expect = 0;
+	while (!rx_bits.r_empty()) {
+		char b = rx_bits.r_pop();
+		if (b == 'A' || b == 'B') {
+			buf_pos = 0;
+			if (b == 'A') {
+				version = NexaCommand::NEXA_32BIT;
+				expect = 32;
+			}
+			else {
+				version = NexaCommand::NEXA_12BIT;
+				expect = 12;
+			}
+		}
+		else if ((b == '0' || b == '1') && buf_pos < expect)
+			buf[buf_pos++] = b;
+
+		if (expect && buf_pos == expect) { // all bits present
+			if (version == NexaCommand::NEXA_12BIT)
+				cmd.from_12bit_cmd(buf);
+			else if (version == NexaCommand::NEXA_32BIT)
+				cmd.from_32bit_cmd(buf);
+
+			expect = 0;
+			buf_pos = 0;
+			version = NexaCommand::NEXA_INVAL;
+			return true;
+		}
+	}
+	return false;
 }
 
 void NexaCommand::print(Print & out) const
@@ -222,6 +302,44 @@ void NexaCommand::transmit_32bit(RF433Transceiver & rf_port, size_t repeats) con
 		}
 	}
 	rf_port.transmit(LOW);
+}
+
+void NexaCommand::add_bit(byte * dst, size_t dst_len, size_t bit_idx, int bit_val)
+{
+	// assert(bit_idx < 8 * dst_len);
+	size_t byte_idx = dst_len - (1 + bit_idx / 8);
+	byte bit_mask = 1 << (bit_idx % 8);
+	if (bit_val)
+		dst[byte_idx] |= bit_mask;
+	else
+		dst[byte_idx] &= ~bit_mask;
+}
+
+void NexaCommand::from_12bit_cmd(const char buf[12])
+{
+	version = NEXA_12BIT;
+	device[0] = 0;
+	device[1] = 0;
+	for (size_t i = 0; i < 8; ++i)
+		add_bit(device + 2, 1, i, buf[i] == '1');
+	channel = 0;
+	group = 0;
+	state = buf[11] == '1';
+}
+
+void NexaCommand::from_32bit_cmd(const char buf[32])
+{
+	size_t i;
+	version = NEXA_32BIT;
+	for (i = 0; i < 24; ++i)
+		add_bit(device, ARRAY_LENGTH(device), i,
+			buf[i] == '1');
+	channel = (buf[28] == '1' ? B1000 : 0) |
+	          (buf[29] == '1' ? B100 : 0) |
+	          (buf[30] == '1' ? B10 : 0) |
+	          (buf[31] == '1' ? B1 : 0);
+	group = buf[26] == '1';
+	state = buf[27] == '1';
 }
 
 #endif

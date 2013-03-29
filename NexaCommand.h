@@ -60,7 +60,7 @@ public: // queries
 	/*
 	 * Transmit this Nexa command on the given RF transmitter.
 	 */
-	void transmit(RF433Transceiver & rf_port, size_t reps = 5) const;
+	void transmit(RF433Transceiver & rf_port, size_t reps = 1) const;
 
 private: // helpers
 	void tx_12bit(RF433Transceiver & rf_port, size_t reps) const;

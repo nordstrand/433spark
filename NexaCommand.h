@@ -6,6 +6,8 @@
 #include "RingBuffer.h"
 #include "HexUtils.h"
 
+#include <Arduino.h>
+
 class NexaCommand {
 public: // types & constants
 	enum Version {
@@ -63,16 +65,12 @@ private: // helpers
 	void transmit_32bit(RF433Transceiver & rf_port, size_t repeats) const;
 
 	/*
-	 * Add the given bit into the given byte array at the given bit
-	 * index.
+	 * Convert the given array of 8 '0' or '1' characters into a byte.
 	 *
-	 * The bit index is LSB, so:
-	 *  - index 0 corresponds to the LSB of dst[dst_len - 1]
-	 *  - index 7 corresponds to the MSB of dst[dst_len - 1]
-	 *  - index 8 corresponds to the LSB of dst[dst_len - 2]
-	 * and so on....
+	 * The character-encoded 'bits' are interpreted as LSB-first, and
+	 * the corresponding byte value is returned.
 	 */
-	static void add_bit(byte * dst, size_t dst_len, size_t bit_idx, int bit_val);
+	static byte charbits2byte(const char bits[8]);
 
 	/*
 	 * Initialize this object from the 12/32 bits in the given buf.
@@ -304,15 +302,16 @@ void NexaCommand::transmit_32bit(RF433Transceiver & rf_port, size_t repeats) con
 	rf_port.transmit(LOW);
 }
 
-void NexaCommand::add_bit(byte * dst, size_t dst_len, size_t bit_idx, int bit_val)
+byte NexaCommand::charbits2byte(const char bits[8])
 {
-	// assert(bit_idx < 8 * dst_len);
-	size_t byte_idx = dst_len - (1 + bit_idx / 8);
-	byte bit_mask = 1 << (bit_idx % 8);
-	if (bit_val)
-		dst[byte_idx] |= bit_mask;
-	else
-		dst[byte_idx] &= ~bit_mask;
+	return (bits[7] == '1' ? 1 : 0) << 7 |
+	       (bits[6] == '1' ? 1 : 0) << 6 |
+	       (bits[5] == '1' ? 1 : 0) << 5 |
+	       (bits[4] == '1' ? 1 : 0) << 4 |
+	       (bits[3] == '1' ? 1 : 0) << 3 |
+	       (bits[2] == '1' ? 1 : 0) << 2 |
+	       (bits[1] == '1' ? 1 : 0) << 1 |
+	       (bits[0] == '1' ? 1 : 0);
 }
 
 void NexaCommand::from_12bit_cmd(const char buf[12])
@@ -320,8 +319,7 @@ void NexaCommand::from_12bit_cmd(const char buf[12])
 	version = NEXA_12BIT;
 	device[0] = 0;
 	device[1] = 0;
-	for (size_t i = 0; i < 8; ++i)
-		add_bit(device + 2, 1, i, buf[i] == '1');
+	device[2] = charbits2byte(buf);
 	channel = 0;
 	group = 0;
 	state = buf[11] == '1';
@@ -329,11 +327,10 @@ void NexaCommand::from_12bit_cmd(const char buf[12])
 
 void NexaCommand::from_32bit_cmd(const char buf[32])
 {
-	size_t i;
 	version = NEXA_32BIT;
-	for (i = 0; i < 24; ++i)
-		add_bit(device, ARRAY_LENGTH(device), i,
-			buf[i] == '1');
+	device[0] = charbits2byte(buf + 16);
+	device[1] = charbits2byte(buf + 8);
+	device[2] = charbits2byte(buf);
 	channel = (buf[28] == '1' ? B1000 : 0) |
 	          (buf[29] == '1' ? B100 : 0) |
 	          (buf[30] == '1' ? B10 : 0) |

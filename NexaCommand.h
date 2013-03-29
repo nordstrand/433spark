@@ -8,6 +8,10 @@
 
 #include <Arduino.h>
 
+/*
+ * Encapsulation of a single NexaCommand, with functionality for parsing
+ * from various formats, and transmitting to a RF433Transceiver instance.
+ */
 class NexaCommand {
 public: // types & constants
 	enum Version {
@@ -55,14 +59,12 @@ public: // queries
 
 	/*
 	 * Transmit this Nexa command on the given RF transmitter.
-	 *
-	 * Return true on success, false otherwise.
 	 */
-	bool transmit(RF433Transceiver & rf_port) const;
+	void transmit(RF433Transceiver & rf_port, size_t reps = 5) const;
 
 private: // helpers
-	void transmit_12bit(RF433Transceiver & rf_port, size_t repeats) const;
-	void transmit_32bit(RF433Transceiver & rf_port, size_t repeats) const;
+	void tx_12bit(RF433Transceiver & rf_port, size_t reps) const;
+	void tx_32bit(RF433Transceiver & rf_port, size_t reps) const;
 
 	/*
 	 * Convert the given array of 8 '0' or '1' characters into a byte.
@@ -123,7 +125,7 @@ bool NexaCommand::from_cmd_str(NexaCommand & cmd,
 bool NexaCommand::from_bit_buffer(NexaCommand & cmd,
 				  RingBuffer<char> & rx_bits)
 {
-	static NexaCommand::Version version = NexaCommand::NEXA_INVAL;
+	static Version version = NEXA_INVAL;
 	static char buf[32]; // Long enough for the longest command
 	static size_t buf_pos = 0;
 	static size_t expect = 0;
@@ -132,11 +134,11 @@ bool NexaCommand::from_bit_buffer(NexaCommand & cmd,
 		if (b == 'A' || b == 'B') {
 			buf_pos = 0;
 			if (b == 'A') {
-				version = NexaCommand::NEXA_32BIT;
+				version = NEXA_32BIT;
 				expect = 32;
 			}
 			else {
-				version = NexaCommand::NEXA_12BIT;
+				version = NEXA_12BIT;
 				expect = 12;
 			}
 		}
@@ -144,14 +146,14 @@ bool NexaCommand::from_bit_buffer(NexaCommand & cmd,
 			buf[buf_pos++] = b;
 
 		if (expect && buf_pos == expect) { // all bits present
-			if (version == NexaCommand::NEXA_12BIT)
+			if (version == NEXA_12BIT)
 				cmd.from_12bit_cmd(buf);
-			else if (version == NexaCommand::NEXA_32BIT)
+			else if (version == NEXA_32BIT)
 				cmd.from_32bit_cmd(buf);
 
 			expect = 0;
 			buf_pos = 0;
-			version = NexaCommand::NEXA_INVAL;
+			version = NEXA_INVAL;
 			return true;
 		}
 	}
@@ -174,31 +176,20 @@ void NexaCommand::print(Print & out) const
 	out.println(state ? '1' : '0');
 }
 
-bool NexaCommand::transmit(RF433Transceiver & rf_port) const
+void NexaCommand::transmit(RF433Transceiver & rf_port, size_t reps) const
 {
-	switch(version) {
-		case NEXA_12BIT:
-			transmit_12bit(rf_port, 5);
-			break;
-		case NEXA_32BIT:
-			transmit_32bit(rf_port, 5);
-			break;
-		default:
-			Serial.print(F("Unknown Nexa command version "));
-			Serial.println(version);
-			return false;
-	}
+	if (version == NEXA_12BIT)
+		tx_12bit(rf_port, reps);
+	else
+		tx_32bit(rf_port, reps);
 
 #if DEBUG
 	Serial.print(F("Transmitted code: "));
 	print(Serial);
-	Serial.flush();
 #endif
-
-	return true;
 }
 
-void NexaCommand::transmit_12bit(RF433Transceiver & rf_port, size_t repeats) const
+void NexaCommand::tx_12bit(RF433Transceiver & rf_port, size_t reps) const
 {
 	/*
 	 * SYNC: SHORT (0.35ms) HIGH, XXLONG (10.9ms) LOW
@@ -220,7 +211,7 @@ void NexaCommand::transmit_12bit(RF433Transceiver & rf_port, size_t repeats) con
 	bits[10] = 1;
 	bits[11] = state;
 
-	for (size_t i = 0; i < repeats; ++i) {
+	for (size_t i = 0; i < reps; ++i) {
 		// SYNC
 		rf_port.transmit(HIGH, SHORT);
 		rf_port.transmit(LOW, XXLONG);
@@ -245,7 +236,7 @@ void NexaCommand::transmit_12bit(RF433Transceiver & rf_port, size_t repeats) con
 	rf_port.transmit(LOW);
 }
 
-void NexaCommand::transmit_32bit(RF433Transceiver & rf_port, size_t repeats) const
+void NexaCommand::tx_32bit(RF433Transceiver & rf_port, size_t reps) const
 {
 	/*
 	 * SYNC: XXLONG (10.15ms) LOW, SHORT (0.31ms) HIGH,
@@ -276,7 +267,7 @@ void NexaCommand::transmit_32bit(RF433Transceiver & rf_port, size_t repeats) con
 	bits[30] = channel & B10;
 	bits[31] = channel & B1;
 
-	for (size_t i = 0; i < repeats; ++i) {
+	for (size_t i = 0; i < reps; ++i) {
 		// SYNC
 		rf_port.transmit(LOW, XXLONG);
 		rf_port.transmit(HIGH, SHORT);

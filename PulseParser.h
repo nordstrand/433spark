@@ -25,8 +25,20 @@ public:
 	PulseParser(RingBuffer<char> & buffer)
 		: buffer(buffer), cur_state(UNKNOWN), cur_bit(0) { }
 
-	/// drive state machine with pulses from Nexa RF waveform
+	/**
+	 * Drive state machine with pulses from Nexa RF waveform. Return
+	 * whether we're currently busy() or not.
+	 */
 	bool operator()(int pulse);
+
+	/**
+	 * Return true if the current state indicates that we're in the
+	 * middle of processing valid Nexa waveforms. Return false
+	 * otherwise, indicating that no Nexa command is currently being
+	 * sent, and we might be able do other computations for a little
+	 * while without losing Nexa commands.
+	 */
+	bool busy() const { return cur_state != UNKNOWN; }
 
 private: // helpers
 	/// classify pulses by length into category 1..5
@@ -166,7 +178,7 @@ bool PulseParser::operator()(int pulse)
 			break;
 	}
 	cur_state = new_state;
-	return cur_state == UNKNOWN;
+	return busy();
 }
 
 #endif

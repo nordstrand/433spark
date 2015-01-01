@@ -1,7 +1,7 @@
 #ifndef NEXA_NODE_HEX_UTILS_H
 #define NEXA_NODE_HEX_UTILS_H
 
-#include <Arduino.h>
+//include <Arduino.h>
 
 namespace Hex {
 	// return 0 - 15 for given char '0' - 'F'/'f'; otherwise return -1
@@ -79,8 +79,8 @@ namespace Hex {
 	{
 		static const char hex[] = "0123456789ABCDEF";
 		for (size_t i = 0; i < len; ++i) {
-			dst[i * 2] = hex[src[i] >> 4 & B1111];
-			dst[i * 2 + 1] = hex[src[i] & B1111];
+			dst[i * 2] = hex[src[i] >> 4 & 0b1111];
+			dst[i * 2 + 1] = hex[src[i] & 0b1111];
 		}
 	}
 }

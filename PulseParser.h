@@ -3,7 +3,7 @@
 
 #include "RingBuffer.h"
 
-#include <Arduino.h>
+//include <Arduino.h>
 
 /*
  * Process incoming pulses from the RX module, and generate bit sequences.
@@ -71,10 +71,14 @@ int PulseParser::quantize_pulse(int p)
 {
 	ASSERT(p >= -INT_MAX);
 	int sign = (p > 0) ? 1 : -1;
-	p = (p * sign) >> 9; // Divide pulse length (abs value) by 512
+    
+    //Spark core has 32 bit int's, rather than 16 bit
+    int MASK = 0b00000000000000001111111111111111;
+    
+	p = ((p * sign) & MASK) >> 9; // Divide pulse length (abs value) by 512
 	// there are 7 bits left in p representing the pulse length as a
 	// multiple of 512µs; map those into the above categories:
-	ASSERT(p <= B01111111);
+	ASSERT(p <= 0b01111111);
 	static const uint8_t m[128] = {
 		1, // 0µs <= p < 512µs
 		2, 2, 2, // 512µs <= p < 2048µs
@@ -104,7 +108,9 @@ int PulseParser::quantize_pulse(int p)
 bool PulseParser::operator()(int pulse)
 {
 	State new_state = UNKNOWN;
+    //Serial.println("a");
 	int p = quantize_pulse(pulse); // current pulse
+    //Serial.println("b");
 	switch (p) {
 		case -5: // LOW: 8192µs <= pulse < 16384µs => SYNC start
 			new_state = SX1;

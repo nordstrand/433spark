@@ -6,7 +6,7 @@
 #include "RingBuffer.h"
 #include "HexUtils.h"
 
-#include <Arduino.h>
+//include <Arduino.h>
 
 /*
  * Encapsulation of a single NexaCommand, with functionality for parsing
@@ -262,10 +262,10 @@ void NexaCommand::tx_32bit(RF433Transceiver & rf_port, size_t reps) const
 	bits[25] = 0;
 	bits[26] = group;
 	bits[27] = state;
-	bits[28] = channel & B1000;
-	bits[29] = channel & B100;
-	bits[30] = channel & B10;
-	bits[31] = channel & B1;
+	bits[28] = channel & 0b1000;
+	bits[29] = channel & 0b100;
+	bits[30] = channel & 0b10;
+	bits[31] = channel & 0b1;
 
 	for (size_t i = 0; i < reps; ++i) {
 		// SYNC
@@ -322,10 +322,10 @@ void NexaCommand::from_32bit_cmd(const char buf[32])
 	device[0] = charbits2byte(buf + 16);
 	device[1] = charbits2byte(buf + 8);
 	device[2] = charbits2byte(buf);
-	channel = (buf[28] == '1' ? B1000 : 0) |
-	          (buf[29] == '1' ? B100 : 0) |
-	          (buf[30] == '1' ? B10 : 0) |
-	          (buf[31] == '1' ? B1 : 0);
+	channel = (buf[28] == '1' ? 0b1000 : 0) |
+	          (buf[29] == '1' ? 0b100 : 0) |
+	          (buf[30] == '1' ? 0b10 : 0) |
+	          (buf[31] == '1' ? 0b1 : 0);
 	group = buf[26] == '1';
 	state = buf[27] == '1';
 }

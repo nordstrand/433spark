@@ -61,6 +61,8 @@ public: // queries
 	 * Transmit this Nexa command on the given RF transmitter.
 	 */
 	void transmit(RF433Transceiver & rf_port, size_t reps = 1) const;
+    
+    String to_cmd_str() const;
 
 private: // helpers
 	void tx_12bit(RF433Transceiver & rf_port, size_t reps) const;
@@ -120,6 +122,26 @@ bool NexaCommand::from_cmd_str(NexaCommand & cmd,
 	cmd.group = g;
 	cmd.state = s;
 	return true;
+}
+
+String NexaCommand::to_cmd_str() const
+{
+    String s = String(version, HEX);
+    s += ":";
+
+    for(int k = 0; k < 3; k++) {
+        s += String(device[k], HEX);
+    }
+    s += ":";
+    s += group ? '1' : '0';
+    s += ":";
+    s += String(channel, HEX);
+    s += ":";
+    s += state ? '1' : '0';
+
+    s.toUpperCase();
+
+    return s;
 }
 
 bool NexaCommand::from_bit_buffer(NexaCommand & cmd,

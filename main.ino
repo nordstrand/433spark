@@ -29,62 +29,64 @@ NexaCommand in_cmd, out_cmd;
 
 int LED = D7; // This one is the built-in tiny one to the right of the USB jack
 
-SYSTEM_MODE(SEMI_AUTOMATIC);
+SYSTEM_MODE(AUTOMATIC);
 
 bool LED_ON = true;
 
+char command[NexaCommand::cmd_str_len] = F("NO RECEIVED");
+
 void setup()
 {
-	pinMode(LED, OUTPUT);
+    Spark.variable("command", command, STRING);
+
+    pinMode(LED, OUTPUT);
     digitalWrite(LED, HIGH);
     Serial.begin(9600);
-	Serial.println(F("nexa_comm ready !:"));
+    Serial.println(F("nexa_comm ready:"));
 }
 
 void toggleLed() {
     LED_ON = ! LED_ON;
     digitalWrite(LED, LED_ON ? HIGH : LOW);
-
 }
 
 void loop()
 {
+    bool busy = FALSE;
 
- // Serial.println("DOH!");
-    
-	bool busy = pulse_parser(rf_port.rx_get_pulse());
-    
-//     Serial.println("DOH!!");
-//    Serial.println(busy);
-//    Serial.println(rx_bits.r_empty());
-	if (!rx_bits.r_empty()) {
-//		Serial.write((const byte *) rx_bits.r_buf(),
-//			     rx_bits.r_buf_len());
-//		Serial.write((const byte *) rx_bits.r_wrapped_buf(),
-//			     rx_bits.r_wrapped_buf_len());
-		if (NexaCommand::from_bit_buffer(in_cmd, rx_bits)) {
+    while (busy = pulse_parser(rf_port.rx_get_pulse())) {
+    }
+
+    if (!rx_bits.r_empty()) {
+        //Serial.write((const byte *) rx_bits.r_buf(),
+        //     rx_bits.r_buf_len());
+        //Serial.write((const byte *) rx_bits.r_wrapped_buf(),
+        //     rx_bits.r_wrapped_buf_len());
+        if (NexaCommand::from_bit_buffer(in_cmd, rx_bits)) {
             toggleLed();
-			Serial.println();
-			Serial.print("RX <- ");
-			in_cmd.print(Serial);
-		}
-	}
-//	else if (!busy && Serial.available() >= NexaCommand::cmd_str_len) {
-//		char buf[NexaCommand::cmd_str_len];
-//		size_t buf_read = Serial.readBytesUntil(
-//			'\n', buf, NexaCommand::cmd_str_len);
-//		Serial.println();
-//		Serial.print("Read ");
-//		Serial.print(buf_read);
-//		Serial.print(" bytes: ");
-//		Serial.write((const byte *) buf, buf_read);
-//		Serial.println();
-//		if (NexaCommand::from_cmd_str(out_cmd, buf, buf_read)) {
-//			for (size_t i = 0; i < 5; i++) {
-//				out_cmd.transmit(rf_port);
-//				Serial.print("TX -> ");
-//				out_cmd.print(Serial);
-//			}
-//		}
-//	}
+            Serial.println();
+            Serial.print("RX <- ");
+            in_cmd.print(Serial);
+
+            in_cmd.to_cmd_str().toCharArray(command, NexaCommand::cmd_str_len + 1);
+        }
+    }
+    else if (!busy && Serial.available() >= NexaCommand::cmd_str_len) {
+        char buf[NexaCommand::cmd_str_len];
+        size_t buf_read = Serial.readBytesUntil(
+            '\n', buf, NexaCommand::cmd_str_len);
+        Serial.println();
+        Serial.print("Read ");
+        Serial.print(buf_read);
+        Serial.print(" bytes: ");
+        Serial.write((const byte *) buf, buf_read);
+        Serial.println();
+        if (NexaCommand::from_cmd_str(out_cmd, buf, buf_read)) {
+            for (size_t i = 0; i < 5; i++) {
+                out_cmd.transmit(rf_port);
+                Serial.print("TX -> ");
+                out_cmd.print(Serial);
+            }
+        }
+    }
 }

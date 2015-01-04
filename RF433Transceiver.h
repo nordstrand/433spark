@@ -3,6 +3,7 @@
 
 #include "Macros.h"
 #include "FastPort.h"
+#include "IO.h"
 
 #include <limits.h>
 
@@ -23,11 +24,10 @@
  */
 class RF433Transceiver {
 public:
-	RF433Transceiver(FastPort port)
-		: port(port), pulse_start(0), pulse_state(false)
+	RF433Transceiver()
+		: pulse_start(0), pulse_state(false), io(IO())
 	{
-		port.d_mode(OUTPUT);
-		port.a_mode(INPUT);
+
 	}
 
 	/*
@@ -42,7 +42,7 @@ public:
 	 */
 	inline void transmit(byte pulse, unsigned short usecs = 0)
 	{
-		port.d_write(pulse);
+		io.write(pulse);
 
 		if (usecs <= 1)
 			return;
@@ -54,7 +54,7 @@ public:
 	}
 
 	// Return current RX state (true iff 433MHz carrier present)
-	inline bool rx_pin() { return port.a_read(); }
+	inline bool rx_pin() { return io.read(); }
 
 	/*
 	 * Block and return the current pulse from the RX.
@@ -85,9 +85,9 @@ public:
 	}
 
 private:
-	FastPort port;
 	unsigned long pulse_start;
 	bool pulse_state;
+    IO io;
 };
 
 #endif

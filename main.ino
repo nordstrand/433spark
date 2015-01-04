@@ -17,12 +17,9 @@
 #include "PulseParser.h"
 #include "NexaCommand.h"
 
-#define  Pin  D6
-
-#define DEBUG 1
 
 
-RF433Transceiver rf_port(Pin); // Which JeeNode Port is the 433MHz H/W on.
+RF433Transceiver rf_port();
 RingBuffer<char> rx_bits(1000);
 PulseParser pulse_parser(rx_bits);
 NexaCommand in_cmd, out_cmd;

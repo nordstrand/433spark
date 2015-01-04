@@ -1,7 +1,7 @@
 # SparkCore 433Mhz RF Remote Control
 
-This is a port of the Arduino library nexa_node to SparkCore. Makes it possible to send and receive commands to/from Nexa brand power plugs, motion sensors, remote controls, etc. 
-In combination with the SparkCore's built-in cloud features one essentially out-of-the-box get features similar to Tellstick and Nexa Gateway - at a fraction of the price.
+This is a port of the Arduino library [nexa_node](http://github.com/jherland/nexa_node) to SparkCore. Makes it possible to send and receive commands to/from Nexa brand power plugs, motion sensors, remote controls, etc. 
+In combination with the SparkCore's built-in cloud features one essentially out-of-the-box get features similar to Tellstick and Nexa Gateway - at a fraction of the cost.
 
 Nexa brand devices are widely available, sold at E.G. Clas Ohlson stores throughout Scandinavia.
 
@@ -49,6 +49,7 @@ _Power plug ordered to turn off - trailing_ ```:0```
 2. 433Mhz RF receiver, model RWS-371
 3. 433Mhz RF transmitter
 
-(doc/sparkcore_breadboard.png)
+![alt text](doc/sparkcore_breadboard.png  "Breadboard")
+
 
 N.B. Wrt. the 5V receiver module - the SparkCore, though beeing a 3.3V devices, has some [5V-tolerant input pins](https://community.spark.io/t/3-3v-and-5v-how-to-use-on-the-spark-core/381) and can also supply 5V through _Vin_.

@@ -19,7 +19,7 @@
 
 
 
-RF433Transceiver rf_port();
+RF433Transceiver rf_port = RF433Transceiver();
 RingBuffer<char> rx_bits(1000);
 PulseParser pulse_parser(rx_bits);
 NexaCommand in_cmd, out_cmd;
@@ -35,6 +35,7 @@ char command[NexaCommand::cmd_str_len] = F("NO RECEIVED");
 void setup()
 {
     Spark.variable("command", command, STRING);
+    Spark.function("send", sendCommand);
 
     pinMode(LED, OUTPUT);
     digitalWrite(LED, HIGH);
@@ -45,6 +46,22 @@ void setup()
 void toggleLed() {
     LED_ON = ! LED_ON;
     digitalWrite(LED, LED_ON ? HIGH : LOW);
+}
+
+int sendCommand(String inCommand)
+{
+    char commandBuf[NexaCommand::cmd_str_len];
+    inCommand.toCharArray(commandBuf, NexaCommand::cmd_str_len + 1);
+    
+    if (NexaCommand::from_cmd_str(out_cmd, commandBuf, NexaCommand::cmd_str_len)) {
+        for (size_t i = 0; i < 5; i++) {
+            out_cmd.transmit(rf_port);
+            Serial.print("TX -> ");
+            out_cmd.print(Serial);
+        }
+        return 1;
+    }
+    else return -1;
 }
 
 void loop()

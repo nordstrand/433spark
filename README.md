@@ -43,6 +43,8 @@ https://api.spark.io/v1/devices/core_name/send -d "args=2:D38EB8:0:2:0"
 ```
 _Power plug ordered to turn off - trailing_ ```:0```
 
+###Serial
+Received Nexa commands are echoed on the Serial interface. Commands entered through serial are sent.
 ##Hardware setup
 
 1. Sparkcore

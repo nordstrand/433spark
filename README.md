@@ -54,4 +54,4 @@ Received Nexa commands are echoed on the Serial interface. Commands entered thro
 ![alt text](doc/sparkcore_breadboard.png  "Breadboard")
 
 
-N.B. Wrt. the 5V receiver module - the SparkCore, though beeing a 3.3V devices, has some [5V-tolerant input pins](https://community.spark.io/t/3-3v-and-5v-how-to-use-on-the-spark-core/381) and can also supply 5V through _Vin_.
+N.B. Wrt. the 5V receiver module - the SparkCore, though beeing a 3.3V device, has some [5V-tolerant input pins](https://community.spark.io/t/3-3v-and-5v-how-to-use-on-the-spark-core/381) and can also supply 5V through _Vin_.

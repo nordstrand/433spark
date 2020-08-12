@@ -7,7 +7,7 @@ Nexa brand devices are widely available, sold at E.G. Clas Ohlson stores through
 
 
 ## Operation
-###Get latest Nexa command
+### Get latest Nexa command
 ```bash
 $ curl  -H "Authorization: Bearer d586ffffd4334d84f4199fa1517cc5bdf02c66e9" \
 "https://api.spark.io/v1/devices/core_name/command"
@@ -26,8 +26,7 @@ $ curl  -H "Authorization: Bearer d586ffffd4334d84f4199fa1517cc5bdf02c66e9" \
 
 _The command was a request to turn on a power plug - trailing_ ```:1```
 
-###Send a Nexa command
-
+### Send a Nexa command
 ```bash
 $ curl -H "Authorization: Bearer d586ffffd4334d84f4199fa1517cc5bdf02c66e9" \
 https://api.spark.io/v1/devices/core_name/send -d "args=2:D38EB8:0:2:0"
@@ -43,7 +42,7 @@ https://api.spark.io/v1/devices/core_name/send -d "args=2:D38EB8:0:2:0"
 ```
 _Power plug ordered to turn off - trailing_ ```:0```
 
-###Serial
+### Serial
 Received Nexa commands are echoed on the Serial interface. Commands entered through serial are sent.
 ##Hardware setup
 
